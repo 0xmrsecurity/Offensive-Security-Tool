@@ -1,0 +1,194 @@
+#!/bin/bash
+
+# Script name for display in help
+TOOL_NAME="vhostmap"
+
+# Colors for better output readability
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+# Function to display bold ASCII art banner
+show_banner() {
+    echo -e "${BOLD}${CYAN}"
+    echo "██╗   ██╗██╗  ██╗ ██████╗ ███████╗████████╗███╗   ███╗ █████╗ ██████╗ "
+    echo "██║   ██║██║  ██║██╔═══██╗██╔════╝╚══██╔══╝████╗ ████║██╔══██╗██╔══██╗"
+    echo "██║   ██║███████║██║   ██║███████╗   ██║   ██╔████╔██║███████║██████╔╝"
+    echo "╚██╗ ██╔╝██╔══██║██║   ██║╚════██║   ██║   ██║╚██╔╝██║██╔══██║██╔═══╝ "
+    echo " ╚████╔╝ ██║  ██║╚██████╔╝███████║   ██║   ██║ ╚═╝ ██║██║  ██║██║     "
+    echo "  ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     "
+    echo -e "${NC}"
+    echo -e "${BOLD}${YELLOW}[${BLUE}+${YELLOW}] ${GREEN}Virtual Host Discovery Tool v1.0${NC}"
+    echo -e "${BOLD}${YELLOW}[${BLUE}+${YELLOW}] ${GREEN}Discover hidden virtual hosts on target web servers${NC}"
+    echo -e "${BOLD}${YELLOW}[${BLUE}+${YELLOW}] ${GREEN}For Elit Hackers....${NC}"
+    echo
+}
+
+# Function to display script usage with better formatting
+show_help() {
+    show_banner
+    
+    echo -e "${BOLD}${YELLOW}Description:${NC}"
+    echo -e "  A powerful tool designed to discover virtual hosts and subdomains on web servers"
+    echo -e "  using ffuf for fuzzing. Perfect for penetration testing and security assessments."
+    echo
+    echo -e "${BOLD}${YELLOW}Usage:${NC}"
+    echo -e "  $TOOL_NAME <DOMAIN> <WORDLIST> <URL> <FS Filter> [OPTIONS]"
+    echo -e "  $TOOL_NAME -h | --help"
+    echo
+    echo -e "${BOLD}${YELLOW}Required Arguments:${NC}"
+    echo -e "  <DOMAIN>      Target domain (without http/https)"
+    echo -e "  <WORDLIST>    Path to wordlist file"
+    echo -e "  <URL>         Target URL (with http/https)"
+    echo -e "  <FS Filter>   Filter responses by size"
+    echo
+    echo -e "${BOLD}${YELLOW}Options:${NC}"
+    echo -e "  -o, --output FILE    Save results to FILE (default: vhost_results.txt)"
+    echo -e "  -t, --threads NUM    Number of threads (default: 40)"
+    echo -e "  -r, --rate NUM       Requests per second (default: no limit)"
+    echo -e "  -s, --silent         Silent mode, output only results"
+    echo -e "  -h, --help           Display this help and exit"
+    echo
+    echo -e "${BOLD}${YELLOW}Examples:${NC}"
+    echo -e "  $TOOL_NAME example.com /path/to/wordlist.txt https://example.com 12345"
+    echo -e "  $TOOL_NAME example.com /path/to/wordlist.txt https://example.com 12345 -o results.txt -t 50"
+    echo -e "  $TOOL_NAME -h"
+    echo
+    echo -e "${BOLD}${YELLOW}Notes:${NC}"
+    echo -e "  - This tool requires ffuf to be installed"
+    echo -e "  - The FS filter is used to filter out common response sizes to reduce false positives"
+    echo -e "  - Use the silent mode (-s) for integration with other scripts"
+}
+
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Parse first argument for help option
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    show_help
+    exit 0
+fi
+
+# Check if ffuf is installed
+if ! command_exists ffuf; then
+    echo -e "${BOLD}${RED}[!] Error: ffuf is not installed.${NC}"
+    echo -e "${BOLD}${YELLOW}[i] Install it with: go install github.com/ffuf/ffuf/v2@latest${NC}"
+    exit 1
+fi
+
+# Default values
+OUTPUT="vhost_results.txt"
+THREADS=40
+RATE=""
+SILENT=false
+
+# Parse command line arguments
+POSITIONAL=()
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -o|--output)
+            OUTPUT="$2"
+            shift 2
+            ;;
+        -t|--threads)
+            THREADS="$2"
+            shift 2
+            ;;
+        -r|--rate)
+            RATE="-rate $2"
+            shift 2
+            ;;
+        -s|--silent)
+            SILENT=true
+            shift
+            ;;
+        *)
+            POSITIONAL+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Restore positional parameters
+set -- "${POSITIONAL[@]}"
+
+# Check if the required arguments are provided
+if [ "${#POSITIONAL[@]}" -lt 4 ]; then
+    echo -e "${BOLD}${RED}[!] Error: Missing required arguments.${NC}"
+    echo -e "${BOLD}${YELLOW}[i] Run '$TOOL_NAME -h' for usage information.${NC}"
+    exit 1
+fi
+
+# Assign arguments to variables
+DOMAIN="${POSITIONAL[0]}"
+WORDLIST="${POSITIONAL[1]}"
+URL="${POSITIONAL[2]}"
+FS="${POSITIONAL[3]}"
+
+# Check if wordlist file exists
+if [ ! -f "$WORDLIST" ]; then
+    echo -e "${BOLD}${RED}[!] Error: Wordlist file '$WORDLIST' not found.${NC}"
+    exit 1
+fi
+
+# Display banner if not in silent mode
+if [ "$SILENT" = false ]; then
+    show_banner
+    
+    echo -e "${BOLD}${GREEN}═════════════════════════════════════════════════════${NC}"
+    echo -e "${BOLD}${BLUE}Target Domain:${NC} ${BOLD}$DOMAIN${NC}"
+    echo -e "${BOLD}${BLUE}Wordlist:${NC} ${BOLD}$WORDLIST${NC}"
+    echo -e "${BOLD}${BLUE}URL:${NC} ${BOLD}$URL${NC}"
+    echo -e "${BOLD}${BLUE}Filter Size:${NC} ${BOLD}$FS${NC}"
+    echo -e "${BOLD}${BLUE}Threads:${NC} ${BOLD}$THREADS${NC}"
+    echo -e "${BOLD}${BLUE}Output:${NC} ${BOLD}$OUTPUT${NC}"
+    echo -e "${BOLD}${GREEN}═════════════════════════════════════════════════════${NC}"
+    echo -e "${BOLD}${YELLOW}[${BLUE}*${YELLOW}]${NC} Starting scan at $(date)"
+    echo
+fi
+
+# Build the ffuf command
+FFUF_CMD="ffuf -H \"Host: FUZZ.$DOMAIN\" -H \"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36\" -c -w \"$WORDLIST\" -u \"$URL\" -fs \"$FS\" -t $THREADS $RATE"
+
+# Add output option
+FFUF_CMD="$FFUF_CMD -o \"$OUTPUT\""
+
+# Add silent option if specified
+if [ "$SILENT" = true ]; then
+    FFUF_CMD="$FFUF_CMD -s"
+fi
+
+# Run ffuf command
+if [ "$SILENT" = false ]; then
+    echo -e "${BOLD}${YELLOW}[${BLUE}*${YELLOW}]${NC} Executing: ${BOLD}${YELLOW}$FFUF_CMD${NC}"
+    echo
+fi
+
+eval $FFUF_CMD
+EXIT_CODE=$?
+
+# Check if the command was successful
+if [ $EXIT_CODE -eq 0 ]; then
+    if [ "$SILENT" = false ]; then
+        echo
+        echo -e "${BOLD}${GREEN}[${BLUE}✓${GREEN}]${NC} ${BOLD}Scan completed successfully!${NC}"
+        echo -e "${BOLD}${GREEN}[${BLUE}✓${GREEN}]${NC} Results saved to: ${BOLD}$OUTPUT${NC}"
+        echo -e "${BOLD}${GREEN}[${BLUE}✓${GREEN}]${NC} Finished at $(date)"
+    fi
+else
+    if [ "$SILENT" = false ]; then
+        echo -e "${BOLD}${RED}[${BLUE}✗${RED}]${NC} ${BOLD}Scan failed or was interrupted. Exit code: $EXIT_CODE${NC}"
+    fi
+    exit $EXIT_CODE
+fi
