@@ -11,6 +11,8 @@ A simple bash script that creates a web server for capturing cookies with custom
 
 ### Installation
 ```bash
-git clone https://github.com/yourusername/cookie-stealer.git
-cd cookie-stealer
-chmod +x stealer.sh
+git clone https://github.com/0xmrsecurity/Offensive-Security-Tool/blob/main/cookies_stealer.sh
+
+chmod +x cookies_stealer.sh
+
+bash cookies_stealer.sh <IP> <PORT> 
